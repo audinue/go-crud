@@ -1,0 +1,13 @@
+{{ template "header.html" }}
+
+<h1>{{if .Product}}Edit{{else}}Add{{end}} Product</h1>
+
+<form method="post">
+  <label>
+    Name
+    <input name="name" {{if .Product.Name}} value="{{.Product.Name}}" {{end}}>
+  </label>
+  <button>Save</button>
+</form>
+
+{{ template "footer.html" }}

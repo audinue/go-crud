@@ -1,0 +1,23 @@
+{{ template "header.html" }}
+
+<h1>Products</h1>
+
+<a href="/products/add">Add</a>
+
+<table border="1">
+  <tr>
+    <th>Name</th>
+    <th>Action</th>
+  </tr>
+  {{range .Products}}
+  <tr>
+    <td>{{.Name}}</td>
+    <td>
+      <a href="/products/{{.ID}}/edit">Edit</a>
+      <a href="/products/{{.ID}}/remove">Remove</a>
+    </td>
+  </tr>
+  {{end}}
+</table>
+
+{{ template "footer.html" }}
