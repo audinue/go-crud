@@ -2,24 +2,10 @@ package main
 
 import (
 	"embed"
-	"encoding/json"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
-	"sync"
 	"text/template"
 )
-
-type Product struct {
-	ID   string
-	Name string
-}
-
-type ProductDB struct {
-	Products map[string]Product
-	Counter  int
-}
 
 //go:embed templates
 var fs embed.FS
@@ -35,52 +21,22 @@ func main() {
 			log.Println(err)
 		}
 	}
-	file, err := os.Open("products.json")
-	var db ProductDB
+	db, err := LoadDB()
 	if err != nil {
-		db = ProductDB{
-			Products: map[string]Product{
-				"1": {ID: "1", Name: "Apple"},
-				"2": {ID: "2", Name: "Banana"},
-				"3": {ID: "3", Name: "Cherry"},
-			},
-			Counter: 3,
-		}
-	} else {
-		json.NewDecoder(file).Decode(&db)
-		file.Close()
-	}
-	mutex := sync.RWMutex{}
-	save := func() {
-		file, err := os.Create("products.json")
-		if err != nil {
-			log.Fatal(err)
-		}
-		err = json.NewEncoder(file).Encode(db)
-		if err != nil {
-			log.Fatal(err)
-		}
-		file.Close()
+		log.Fatal(err)
 	}
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" {
 			http.NotFound(w, r)
 			return
 		}
-		mutex.RLock()
-		defer mutex.RUnlock()
 		render(w, "products", map[string]any{
-			"Products": db.Products,
+			"Products": db.GetProducts(),
 		})
 	})
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
-			mutex.Lock()
-			defer mutex.Unlock()
-			db.Counter++
-			id := strconv.Itoa(db.Counter)
-			db.Products[id] = Product{ID: id, Name: r.FormValue("name")}
-			save()
+			db.AddProduct(Product{Name: r.FormValue("name")})
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			render(w, "products-form", nil)
@@ -92,19 +48,14 @@ func main() {
 			w.WriteHeader(400)
 			return
 		}
-		mutex.RLock()
-		product, ok := db.Products[id]
-		mutex.RUnlock()
-		if !ok {
+		product, err := db.GetProduct(id)
+		if err != nil {
 			w.WriteHeader(404)
 			return
 		}
 		if r.Method == "POST" {
-			mutex.Lock()
-			defer mutex.Unlock()
 			product.Name = r.FormValue("name")
-			db.Products[id] = product
-			save()
+			db.SaveProduct(product)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			render(w, "products-form", map[string]any{
@@ -118,18 +69,13 @@ func main() {
 			w.WriteHeader(400)
 			return
 		}
-		mutex.RLock()
-		_, ok := db.Products[id]
-		mutex.RUnlock()
-		if !ok {
+		product, err := db.GetProduct(id)
+		if err != nil {
 			w.WriteHeader(404)
 			return
 		}
 		if r.Method == "POST" {
-			mutex.Lock()
-			defer mutex.Unlock()
-			delete(db.Products, id)
-			save()
+			db.RemoveProduct(product)
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			render(w, "products-confirm", nil)
