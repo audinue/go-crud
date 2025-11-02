@@ -62,14 +62,18 @@ func main() {
 		}
 		file.Close()
 	}
-	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
 		mutex.RLock()
 		defer mutex.RUnlock()
 		render(w, "products", map[string]any{
 			"Products": db.Products,
 		})
 	})
-	http.HandleFunc("/products/add", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			mutex.Lock()
 			defer mutex.Unlock()
@@ -77,12 +81,12 @@ func main() {
 			id := strconv.Itoa(db.Counter)
 			db.Products[id] = Product{ID: id, Name: r.FormValue("name")}
 			save()
-			http.Redirect(w, r, "/products", http.StatusFound)
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
 			render(w, "products-form", nil)
 		}
 	})
-	http.HandleFunc("/products/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/{id}/edit", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if id == "" {
 			w.WriteHeader(400)
@@ -101,14 +105,14 @@ func main() {
 			product.Name = r.FormValue("name")
 			db.Products[id] = product
 			save()
-			http.Redirect(w, r, "/products", http.StatusFound)
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
-			render(w, "products-form.html", map[string]any{
+			render(w, "products-form", map[string]any{
 				"Product": product,
 			})
 		}
 	})
-	http.HandleFunc("/products/{id}/remove", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/{id}/remove", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
 		if id == "" {
 			w.WriteHeader(400)
@@ -126,9 +130,9 @@ func main() {
 			defer mutex.Unlock()
 			delete(db.Products, id)
 			save()
-			http.Redirect(w, r, "/products", http.StatusFound)
+			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
-			render(w, "products-confirm.html", nil)
+			render(w, "products-confirm", nil)
 		}
 	})
 	err = http.ListenAndServe(":8080", nil)

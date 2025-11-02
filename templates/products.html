@@ -2,7 +2,7 @@
 
 <h1>Products</h1>
 
-<a href="/products/add">Add</a>
+<a href="/add">Add</a>
 
 <table border="1">
   <tr>
@@ -13,8 +13,8 @@
   <tr>
     <td>{{.Name}}</td>
     <td>
-      <a href="/products/{{.ID}}/edit">Edit</a>
-      <a href="/products/{{.ID}}/remove">Remove</a>
+      <a href="/{{.ID}}/edit">Edit</a>
+      <a href="/{{.ID}}/remove">Remove</a>
     </td>
   </tr>
   {{end}}
