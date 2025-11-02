@@ -61,13 +61,13 @@ func (d *ProductDB) All() map[string]Product {
 	return maps.Clone(d.Products)
 }
 
-func (d *ProductDB) Add(product Product) {
+func (d *ProductDB) Add(product Product) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	d.Counter++
 	product.ID = strconv.Itoa(d.Counter)
 	d.Products[product.ID] = product
-	d.save()
+	return d.save()
 }
 
 func (d *ProductDB) Get(id string) (Product, error) {
@@ -80,16 +80,16 @@ func (d *ProductDB) Get(id string) (Product, error) {
 	return product, nil
 }
 
-func (d *ProductDB) Edit(product Product) {
+func (d *ProductDB) Edit(product Product) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	d.Products[product.ID] = product
-	d.save()
+	return d.save()
 }
 
-func (d *ProductDB) Remove(product Product) {
+func (d *ProductDB) Remove(product Product) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	delete(d.Products, product.ID)
-	d.save()
+	return d.save()
 }
