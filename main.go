@@ -28,7 +28,7 @@ func main() {
 
 	http.HandleFunc("/add", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
-			err := db.Add(Product{Name: r.FormValue("name")})
+			err := db.Add(ProductFromForm(r))
 			if err != nil {
 				http.Error(w, "unable to save product", 500)
 				return
@@ -45,20 +45,19 @@ func main() {
 			w.WriteHeader(400)
 			return
 		}
-		product, err := db.Get(id)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
 		if r.Method == "POST" {
-			product.Name = r.FormValue("name")
-			err := db.Edit(product)
+			err := db.Edit(id, ProductFromForm(r))
 			if err != nil {
 				http.Error(w, "unable to save product", 500)
 				return
 			}
 			http.Redirect(w, r, "/", http.StatusFound)
 		} else {
+			product, err := db.Get(id)
+			if err != nil {
+				http.NotFound(w, r)
+				return
+			}
 			template.Render(w, "products-form", map[string]any{
 				"Product": product,
 			})
@@ -71,13 +70,8 @@ func main() {
 			w.WriteHeader(400)
 			return
 		}
-		product, err := db.Get(id)
-		if err != nil {
-			http.NotFound(w, r)
-			return
-		}
 		if r.Method == "POST" {
-			err := db.Remove(product)
+			err := db.Remove(id)
 			if err != nil {
 				http.Error(w, "unable to remove product", 500)
 				return

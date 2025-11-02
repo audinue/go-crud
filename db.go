@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"maps"
+	"net/http"
 	"os"
 	"strconv"
 	"sync"
@@ -12,6 +13,10 @@ import (
 type Product struct {
 	ID   string
 	Name string
+}
+
+func ProductFromForm(r *http.Request) Product {
+	return Product{Name: r.FormValue("name")}
 }
 
 type ProductDB struct {
@@ -80,16 +85,25 @@ func (d *ProductDB) Get(id string) (Product, error) {
 	return product, nil
 }
 
-func (d *ProductDB) Edit(product Product) error {
+func (d *ProductDB) Edit(id string, product Product) error {
+	_, err := d.Get(id)
+	if err != nil {
+		return err
+	}
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.Products[product.ID] = product
+	product.ID = id
+	d.Products[id] = product
 	return d.save()
 }
 
-func (d *ProductDB) Remove(product Product) error {
+func (d *ProductDB) Remove(id string) error {
+	_, err := d.Get(id)
+	if err != nil {
+		return err
+	}
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	delete(d.Products, product.ID)
+	delete(d.Products, id)
 	return d.save()
 }
