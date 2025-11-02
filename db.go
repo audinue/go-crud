@@ -17,14 +17,10 @@ type Product struct {
 type ProductDB struct {
 	Products map[string]Product
 	Counter  int
+	mutex    sync.RWMutex
 }
 
-type DB struct {
-	productDB ProductDB
-	mutex     sync.RWMutex
-}
-
-func LoadDB() (*DB, error) {
+func LoadProductDB() (*ProductDB, error) {
 	var productDb ProductDB
 	file, err := os.Open("products.json")
 	if err != nil {
@@ -43,15 +39,15 @@ func LoadDB() (*DB, error) {
 		}
 		file.Close()
 	}
-	return &DB{productDB: productDb}, nil
+	return &productDb, nil
 }
 
-func (d *DB) save() error {
+func (d *ProductDB) save() error {
 	file, err := os.Create("products.json")
 	if err != nil {
 		return err
 	}
-	err = json.NewEncoder(file).Encode(d.productDB)
+	err = json.NewEncoder(file).Encode(d)
 	if err != nil {
 		return err
 	}
@@ -59,24 +55,24 @@ func (d *DB) save() error {
 	return nil
 }
 
-func (d *DB) GetProducts() map[string]Product {
+func (d *ProductDB) All() map[string]Product {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
-	return maps.Clone(d.productDB.Products)
+	return maps.Clone(d.Products)
 }
 
-func (d *DB) AddProduct(product Product) {
+func (d *ProductDB) Add(product Product) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.productDB.Counter++
-	product.ID = strconv.Itoa(d.productDB.Counter)
-	d.productDB.Products[product.ID] = product
+	d.Counter++
+	product.ID = strconv.Itoa(d.Counter)
+	d.Products[product.ID] = product
 	d.save()
 }
 
-func (d *DB) GetProduct(id string) (Product, error) {
+func (d *ProductDB) Get(id string) (Product, error) {
 	d.mutex.RLock()
-	product, ok := d.productDB.Products[id]
+	product, ok := d.Products[id]
 	d.mutex.RUnlock()
 	if !ok {
 		return Product{}, errors.New("product not found")
@@ -84,16 +80,16 @@ func (d *DB) GetProduct(id string) (Product, error) {
 	return product, nil
 }
 
-func (d *DB) SaveProduct(product Product) {
+func (d *ProductDB) Edit(product Product) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	d.productDB.Products[product.ID] = product
+	d.Products[product.ID] = product
 	d.save()
 }
 
-func (d *DB) RemoveProduct(product Product) {
+func (d *ProductDB) Remove(product Product) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	delete(d.productDB.Products, product.ID)
+	delete(d.Products, product.ID)
 	d.save()
 }
